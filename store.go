@@ -5,7 +5,8 @@ import "database/sql"
 // Make it an interface to easily inject in our services or mock in test
 type Store interface {
 	// Users
-	CreateUser() error
+	CreateUser(user *User) (*User, error)
+	GetUserByID(id string) (*User, error)
 	CreateTask(t *Task) (*Task, error)
 	GetTask(id string) (*Task, error)
 }
@@ -21,8 +22,23 @@ func NewStore(db *sql.DB) *Storage {
 	}
 }
 
-func (s *Storage) CreateUser() error {
-	return nil
+func (s *Storage) CreateUser(u *User) (*User, error) {
+	rows, err := s.db.Exec("INSERT INTO users (email, firstName, lastName, password) VALUES (?, ?, ?, ?)", u.Email, u.FirstName, u.LastName, u.Password)
+	if err != nil {
+		return nil, err
+	}
+	id, err := rows.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+	u.ID = id
+	return u, nil
+}
+
+func (s *Storage) GetUserByID(id string) (*User, error) {
+	var u User
+	err := s.db.QueryRow("SELECT id, email, firstName, lastName, createdAt FROM users where id = ?", id).Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.CreatedAt)
+	return &u, err
 }
 
 func (s *Storage) CreateTask(t *Task) (*Task, error) {
@@ -39,10 +55,10 @@ func (s *Storage) CreateTask(t *Task) (*Task, error) {
 }
 
 func (s *Storage) GetTask(id string) (*Task, error) {
-	var t *Task
+	var t Task
 	err := s.db.QueryRow("SELECT id, name, status, project_id, assigned_to, created_at FROM tasks WHERE id=?", id).Scan(&t.ID, &t.Name, &t.Status, &t.ProjectID, &t.AssignedToID, &t.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
-	return t, nil
+	return &t, nil
 }

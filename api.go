@@ -25,6 +25,9 @@ func (s *APIServer) Serve() {
 	subRouter := router.PathPrefix("/api/v1").Subrouter()
 
 	// Registering our services
+	usersService := NewUserService(s.store)
+	usersService.RegisterRoutes(subRouter)
+
 	tasksService := NewTasksService(s.store)
 	tasksService.RegisterRoutes(subRouter)
 
